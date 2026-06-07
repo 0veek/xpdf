@@ -69,6 +69,7 @@ function PageAnnotations({
   const [drawing, setDrawing] = useState<{ startX: number; startY: number } | null>(null);
   const [preview, setPreview] = useState<NormalizedRect | null>(null);
   const [drawPath, setDrawPath] = useState<NormalizedPoint[]>([]);
+  const [isCapturing, setIsCapturing] = useState(false);
   const isDrawingPath = useRef(false);
 
   const pageAnnotations = annotations.filter((a) => a.pageNumber === pageNumber);
@@ -85,10 +86,12 @@ function PageAnnotations({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (activeTool === "select") return;
-    if (e.pointerType === "touch") e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
     const point = toNormalized(e.clientX, e.clientY);
     if (!point) return;
+
+    setIsCapturing(true);
+    if (e.pointerType === "touch") e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
 
     if (activeTool === "sticky") {
       onAddAnnotation({
@@ -156,7 +159,12 @@ function PageAnnotations({
     });
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e?: React.PointerEvent) => {
+    if (e?.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setIsCapturing(false);
+
     if (activeTool === "draw" && isDrawingPath.current) {
       isDrawingPath.current = false;
       if (drawPath.length > 2) {
@@ -219,7 +227,12 @@ function PageAnnotations({
     <div
       ref={overlayRef}
       className={cn(
-        "absolute inset-0 touch-none",
+        "absolute inset-0",
+        activeTool === "select"
+          ? "pointer-events-none"
+          : isCapturing
+            ? "touch-none"
+            : "touch-pan-y touch-pan-x",
         activeTool !== "select" && "cursor-crosshair"
       )}
       onPointerDown={handlePointerDown}
@@ -313,7 +326,7 @@ function AnnotationRender({ ann, onClick }: { ann: Annotation; onClick: () => vo
     <div
       className={cn(
         "absolute",
-        (ann.type === "sticky" || ann.type === "stamp") && "cursor-pointer"
+        (ann.type === "sticky" || ann.type === "stamp") && "pointer-events-auto cursor-pointer"
       )}
       style={{
         left: `${ann.rect.x * 100}%`,
