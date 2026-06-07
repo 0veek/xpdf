@@ -5,6 +5,7 @@ import * as pdfjsLib from "pdfjs-dist";
 import type { Annotation, AnnotateTool, NormalizedPoint, NormalizedRect } from "@/lib/pdf/types";
 import { ANNOTATION_COLORS } from "@/lib/pdf/types";
 import { renderPdfPageToCanvas, type PageDimensions } from "@/lib/pdf/render";
+import { computeFitScale, useContainerWidth } from "@/hooks/use-container-width";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -66,8 +67,10 @@ function PageAnnotations({
     return { x, y };
   }, []);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     if (activeTool === "select") return;
+    if (e.pointerType === "touch") e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
     const point = toNormalized(e.clientX, e.clientY);
     if (!point) return;
 
@@ -117,7 +120,7 @@ function PageAnnotations({
     setPreview({ x: point.x, y: point.y, width: 0, height: 0 });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (e: React.PointerEvent) => {
     const point = toNormalized(e.clientX, e.clientY);
     if (!point) return;
 
@@ -137,7 +140,7 @@ function PageAnnotations({
     });
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     if (activeTool === "draw" && isDrawingPath.current) {
       isDrawingPath.current = false;
       if (drawPath.length > 2) {
@@ -197,16 +200,16 @@ function PageAnnotations({
     <div
       ref={overlayRef}
       className={cn(
-        "absolute inset-0",
+        "absolute inset-0 touch-none",
         activeTool !== "select" && "cursor-crosshair"
       )}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {showOcrOverlay && ocrText && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-0 hover:opacity-100 focus-within:opacity-100">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-80 sm:opacity-0 sm:hover:opacity-100 focus-within:opacity-100">
           <div className="absolute bottom-0 left-0 right-0 max-h-1/3 overflow-auto bg-background/90 p-2 text-[9px] leading-tight border-t">
             {ocrText}
           </div>
@@ -331,6 +334,7 @@ function PdfPage({
   pdf,
   pageNumber,
   scale,
+  containerWidth,
   annotations,
   activeTool,
   stampLabel,
@@ -343,6 +347,7 @@ function PdfPage({
   pdf: pdfjsLib.PDFDocumentProxy;
   pageNumber: number;
   scale: number;
+  containerWidth: number;
   annotations: Annotation[];
   activeTool: AnnotateTool;
   stampLabel?: string;
@@ -364,7 +369,13 @@ function PdfPage({
       try {
         const page = await pdf.getPage(pageNumber);
         if (cancelled || !canvasRef.current) return;
-        const dimensions = await renderPdfPageToCanvas(page, canvasRef.current, scale);
+        const baseWidth = page.getViewport({ scale: 1 }).width;
+        const effectiveScale = computeFitScale(baseWidth, containerWidth, scale);
+        const dimensions = await renderPdfPageToCanvas(
+          page,
+          canvasRef.current,
+          effectiveScale
+        );
         if (!cancelled) setDims(dimensions);
       } catch {
         if (!cancelled) setDims(null);
@@ -374,12 +385,12 @@ function PdfPage({
     return () => {
       cancelled = true;
     };
-  }, [pdf, pageNumber, scale]);
+  }, [pdf, pageNumber, scale, containerWidth]);
 
   return (
     <div
-      className="relative shadow-elevated rounded-sm bg-white"
-      style={dims ? { width: dims.width, height: dims.height } : { width: 612 * scale, height: 792 * scale }}
+      className="relative max-w-full shadow-elevated rounded-sm bg-white"
+      style={dims ? { width: dims.width, height: dims.height } : undefined}
     >
       <canvas ref={canvasRef} className="block" />
       {dims && (
@@ -401,7 +412,7 @@ function PdfPage({
 
 export function PdfDocumentView({
   data,
-  scale = 1.25,
+  scale = 1,
   annotations,
   activeTool,
   stampLabel,
@@ -412,6 +423,8 @@ export function PdfDocumentView({
   onAnnotationClick,
   className,
 }: PdfDocumentViewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const containerWidth = useContainerWidth(containerRef);
   const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -445,8 +458,8 @@ export function PdfDocumentView({
 
   if (loading) {
     return (
-      <div className={cn("flex flex-col gap-4 items-center", className)}>
-        <Skeleton className="h-[800px] w-full max-w-[612px]" />
+      <div className={cn("flex flex-col gap-4 items-center w-full", className)}>
+        <Skeleton className="min-h-[50vh] w-full max-w-full aspect-[8.5/11]" />
       </div>
     );
   }
@@ -462,13 +475,14 @@ export function PdfDocumentView({
   if (!pdf) return null;
 
   return (
-    <div className={cn("flex flex-col gap-6 items-center", className)}>
+    <div ref={containerRef} className={cn("flex w-full max-w-full flex-col gap-4 sm:gap-6 items-center", className)}>
       {Array.from({ length: pageCount }, (_, index) => (
         <PdfPage
           key={index}
           pdf={pdf}
           pageNumber={index + 1}
           scale={scale}
+          containerWidth={containerWidth}
           annotations={annotations}
           activeTool={activeTool}
           stampLabel={stampLabel}

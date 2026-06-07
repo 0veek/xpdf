@@ -25,6 +25,8 @@ import {
   Pencil,
   Stamp,
   Underline,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 const PdfDocumentView = dynamic(
@@ -49,7 +51,7 @@ export function ReviewWorkspace({ documentId }: ReviewWorkspaceProps) {
   const [stampLabel, setStampLabel] = useState<string>(STAMP_PRESETS[0]);
   const [commentText, setCommentText] = useState("");
   const [selectedAnn, setSelectedAnn] = useState<string | null>(null);
-  const [scale] = useState(1.25);
+  const [scale, setScale] = useState(1);
 
   const {
     currentDocument,
@@ -125,22 +127,22 @@ export function ReviewWorkspace({ documentId }: ReviewWorkspaceProps) {
       }
     >
       <div className="flex flex-col h-full">
-        <div className="flex items-center gap-1 border-b px-3 py-1.5 bg-muted/20 flex-wrap">
+        <div className="flex items-center gap-1 border-b px-2 sm:px-3 py-1.5 bg-muted/20 flex-wrap overflow-x-auto">
           {reviewTools.map((tool) => (
             <Button
               key={tool.id}
               variant={activeTool === tool.id ? "secondary" : "ghost"}
               size="sm"
-              className={cn("text-xs h-7 gap-1", activeTool === tool.id && "font-medium")}
+              className={cn("text-xs h-7 gap-1 shrink-0", activeTool === tool.id && "font-medium")}
               onClick={() => setActiveTool(tool.id)}
             >
               <tool.icon className="size-3.5" />
-              {tool.label}
+              <span className="hidden sm:inline">{tool.label}</span>
             </Button>
           ))}
           {activeTool === "stamp" && (
             <Select value={stampLabel} onValueChange={(v) => v && setStampLabel(v)}>
-              <SelectTrigger className="h-7 w-32 text-xs">
+              <SelectTrigger className="h-7 w-28 sm:w-32 text-xs shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -150,13 +152,20 @@ export function ReviewWorkspace({ documentId }: ReviewWorkspaceProps) {
               </SelectContent>
             </Select>
           )}
-          <div className="ml-auto flex gap-1">
+          <div className="ml-auto flex gap-1 shrink-0">
+            <Button variant="ghost" size="icon-sm" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))} aria-label="Zoom out">
+              <ZoomOut className="size-3.5" />
+            </Button>
+            <span className="text-xs font-bold tabular-nums w-10 text-center self-center">{Math.round(scale * 100)}%</span>
+            <Button variant="ghost" size="icon-sm" onClick={() => setScale((s) => Math.min(3, s + 0.25))} aria-label="Zoom in">
+              <ZoomIn className="size-3.5" />
+            </Button>
             <Button variant="ghost" size="icon-sm" disabled={!canUndo()} onClick={() => undo()}>↩</Button>
             <Button variant="ghost" size="icon-sm" disabled={!canRedo()} onClick={() => redo()}>↪</Button>
             <Button variant="outline" size="sm" onClick={handleExport}>Export</Button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto bg-canvas p-6">
+        <div className="flex-1 overflow-auto bg-canvas p-2 sm:p-4 lg:p-6">
           <PdfDocumentView
             data={currentDocument.data}
             scale={scale}

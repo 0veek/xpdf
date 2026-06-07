@@ -46,7 +46,7 @@ export function FilesWorkspace() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-3xl">
+    <div className="flex flex-col gap-6 p-4 sm:p-6 max-w-3xl w-full">
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Files</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -88,7 +88,7 @@ export function FilesWorkspace() {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="opacity-0 group-hover:opacity-100 shrink-0"
+                  className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 shrink-0"
                   onClick={async (e) => {
                     e.preventDefault();
                     await deleteDocumentById(doc.id);

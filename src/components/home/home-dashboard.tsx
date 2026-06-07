@@ -94,14 +94,14 @@ export function HomeDashboard() {
   ];
 
   return (
-    <div className="flex flex-col min-h-full justify-between gap-12 p-8 max-w-5xl mx-auto select-none">
+    <div className="flex flex-col min-h-full justify-between gap-6 sm:gap-12 p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full">
       {/* 2-Column Main Workspace */}
       <div className="grid lg:grid-cols-5 gap-8 items-start flex-1 w-full">
         
         {/* Left Column (3/5 width): Headers, dropzone, and templates */}
         <div className="lg:col-span-3 flex flex-col gap-6 w-full">
           <section className="flex flex-col gap-2">
-            <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground/80 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-foreground via-foreground/90 to-muted-foreground/80 bg-clip-text text-transparent">
               Your documents, understood.
             </h1>
             <p className="text-xs text-muted-foreground/80 font-semibold max-w-xl">
@@ -163,7 +163,7 @@ export function HomeDashboard() {
                 </Link>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {recent.map((doc) => (
                   <Link
                     key={doc.id}
@@ -248,10 +248,10 @@ export function HomeDashboard() {
 
       {/* macOS-style Bottom Dock */}
       <div className="mt-auto pt-6 border-t border-border/30 w-full flex flex-col gap-3.5 items-center">
-        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60 select-none">
+        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
           Quick Actions Launchpad
         </span>
-        <div className="mac-glass rounded-[24px] p-2 flex items-center gap-1.5 max-w-full overflow-x-auto no-scrollbar shadow-[0_12px_45px_rgba(0,0,0,0.08)] border border-white/10 dark:border-white/5 bg-background/20 backdrop-blur-2xl">
+        <div className="mac-glass rounded-[24px] p-2 flex items-center gap-1.5 max-w-full overflow-x-auto no-scrollbar select-none shadow-[0_12px_45px_rgba(0,0,0,0.08)] border border-white/10 dark:border-white/5 bg-background/20 backdrop-blur-2xl">
           {workspaces.map((item) => (
             <Link
               key={item.href}

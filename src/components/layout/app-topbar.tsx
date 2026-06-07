@@ -40,6 +40,7 @@ export function AppTopbar({
         <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground transition-colors hover:bg-muted/50 rounded-lg" />
         <Separator orientation="vertical" className="h-4 border-border/40" />
 
+        <div className="min-w-0 flex-1">
         {breadcrumbs.length > 0 ? (
           <Breadcrumb className="hidden sm:flex ml-1">
             <BreadcrumbList>
@@ -62,8 +63,9 @@ export function AppTopbar({
         ) : (
           <span className="text-xs font-bold truncate text-foreground/90 ml-1">{title}</span>
         )}
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           <Button
             variant="outline"
             size="sm"

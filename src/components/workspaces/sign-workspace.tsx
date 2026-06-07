@@ -27,7 +27,7 @@ export function SignWorkspace({ documentId }: SignWorkspaceProps) {
   const [signature, setSignature] = useState<string | null>(null);
   const [typedSig, setTypedSig] = useState("");
   const [mode, setMode] = useState<"draw" | "type">("draw");
-  const [scale] = useState(1.25);
+  const [scale] = useState(1);
 
   const {
     currentDocument,
@@ -73,8 +73,8 @@ export function SignWorkspace({ documentId }: SignWorkspaceProps) {
         { label: currentDocument.name },
       ]}
     >
-      <div className="flex flex-col lg:flex-row gap-4 p-4 h-full overflow-hidden">
-        <aside className="w-full lg:w-72 shrink-0 flex flex-col gap-4 border rounded-lg p-4">
+      <div className="flex flex-col-reverse lg:flex-row gap-4 p-2 sm:p-4 h-full overflow-hidden">
+        <aside className="w-full lg:w-72 shrink-0 flex flex-col gap-4 border rounded-lg p-3 sm:p-4">
           <h1 className="text-sm font-semibold">Create signature</h1>
           <Tabs value={mode} onValueChange={(v) => setMode(v as "draw" | "type")}>
             <TabsList className="w-full">
@@ -97,7 +97,7 @@ export function SignWorkspace({ documentId }: SignWorkspaceProps) {
           </Button>
         </aside>
 
-        <div className="flex-1 overflow-auto bg-canvas p-4 rounded-lg">
+        <div className="flex-1 min-h-[50vh] lg:min-h-0 overflow-auto bg-canvas p-2 sm:p-4 rounded-lg">
           <PdfDocumentView
             data={currentDocument.data}
             scale={scale}

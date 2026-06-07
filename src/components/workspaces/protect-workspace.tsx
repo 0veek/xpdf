@@ -32,7 +32,7 @@ export function ProtectWorkspace({ documentId }: ProtectWorkspaceProps) {
   const [scrubMeta, setScrubMeta] = useState(true);
   const [applyRedact, setApplyRedact] = useState(true);
   const [activeTool, setActiveTool] = useState<AnnotateTool>("redaction");
-  const [scale] = useState(1.25);
+  const [scale] = useState(1);
 
   const {
     currentDocument,
@@ -100,8 +100,8 @@ export function ProtectWorkspace({ documentId }: ProtectWorkspaceProps) {
     <AppShell
       breadcrumbs={[{ label: "Protect", href: "/protect" }, { label: currentDocument.name }]}
     >
-      <div className="flex flex-col lg:flex-row gap-4 p-4 h-full">
-        <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-4 border rounded-lg p-4">
+      <div className="flex flex-col-reverse lg:flex-row gap-4 p-2 sm:p-4 h-full">
+        <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-4 border rounded-lg p-3 sm:p-4">
           <h1 className="text-sm font-semibold">Protect & comply</h1>
 
           <div className="flex flex-col gap-2">
@@ -140,7 +140,7 @@ export function ProtectWorkspace({ documentId }: ProtectWorkspaceProps) {
           </p>
         </aside>
 
-        <div className="flex-1 overflow-auto bg-canvas p-4 rounded-lg">
+        <div className="flex-1 min-h-[50vh] lg:min-h-0 overflow-auto bg-canvas p-2 sm:p-4 rounded-lg">
           <PdfDocumentView
             data={currentDocument.data}
             scale={scale}

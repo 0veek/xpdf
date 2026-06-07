@@ -3,31 +3,60 @@
 import { useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
+import { getDevicePixelRatio } from "@/lib/pdf/render";
 
 type SignaturePadProps = {
   onChange: (dataUrl: string | null) => void;
-  width?: number;
   height?: number;
 };
 
-export function SignaturePad({ onChange, width = 400, height = 150 }: SignaturePadProps) {
+export function SignaturePad({ onChange, height = 150 }: SignaturePadProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
   const getCtx = () => canvasRef.current?.getContext("2d");
 
+  const resizeCanvas = useCallback(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+
+    const displayWidth = Math.max(container.clientWidth, 200);
+    const displayHeight = height;
+    const pixelRatio = getDevicePixelRatio();
+
+    canvas.width = Math.floor(displayWidth * pixelRatio);
+    canvas.height = Math.floor(displayHeight * pixelRatio);
+    canvas.style.width = `${displayWidth}px`;
+    canvas.style.height = `${displayHeight}px`;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
+  }, [height]);
+
   const clear = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = getCtx();
     if (!canvas || !ctx) return;
+    const displayWidth = canvas.width / getDevicePixelRatio();
+    const displayHeight = canvas.height / getDevicePixelRatio();
     ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, displayWidth, displayHeight);
     onChange(null);
   }, [onChange]);
 
   useEffect(() => {
-    clear();
-  }, [clear]);
+    resizeCanvas();
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => resizeCanvas());
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [resizeCanvas]);
 
   const emitChange = () => {
     const canvas = canvasRef.current;
@@ -40,8 +69,8 @@ export function SignaturePad({ onChange, width = 400, height = 150 }: SignatureP
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
     return {
-      x: ((clientX - rect.left) / rect.width) * canvas.width,
-      y: ((clientY - rect.top) / rect.height) * canvas.height,
+      x: clientX - rect.left,
+      y: clientY - rect.top,
     };
   };
 
@@ -75,12 +104,10 @@ export function SignaturePad({ onChange, width = 400, height = 150 }: SignatureP
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={containerRef} className="flex w-full flex-col gap-2">
       <canvas
         ref={canvasRef}
-        width={width}
-        height={height}
-        className="border rounded-lg bg-white touch-none cursor-crosshair w-full max-w-full"
+        className="border rounded-lg bg-white touch-none cursor-crosshair w-full"
         onMouseDown={start}
         onMouseMove={move}
         onMouseUp={end}

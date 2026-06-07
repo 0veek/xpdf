@@ -54,7 +54,7 @@ type EditorWorkspaceProps = {
 
 export function EditorWorkspace({ documentId }: EditorWorkspaceProps) {
   const router = useRouter();
-  const [scale, setScale] = useState(1.25);
+  const [scale, setScale] = useState(1);
   const [activeTool, setActiveTool] = useState<AnnotateTool>("highlight");
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
@@ -227,9 +227,9 @@ export function EditorWorkspace({ documentId }: EditorWorkspaceProps) {
         </div>
 
         {/* PDF Canvas Container */}
-        <div className="flex-1 overflow-auto bg-canvas p-6 pt-16 relative flex justify-center items-start">
+        <div className="flex-1 overflow-auto bg-canvas p-2 sm:p-4 lg:p-6 pt-12 sm:pt-16 relative flex justify-center items-start">
           {/* Floating macOS Markup Toolbar */}
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1 mac-glass px-2.5 py-1.5 rounded-full shadow-lg border border-border/40 bg-background/50 backdrop-blur-xl animate-fade-in select-none">
+          <div className="absolute top-2 sm:top-4 left-1/2 -translate-x-1/2 z-10 flex max-w-[calc(100%-1rem)] items-center gap-0.5 sm:gap-1 overflow-x-auto mac-glass px-1.5 sm:px-2.5 py-1.5 rounded-full shadow-lg border border-border/40 bg-background/50 backdrop-blur-xl no-scrollbar">
             {annotateTools.map((tool) => {
               const isActive = activeTool === tool.id;
               return (
@@ -238,7 +238,7 @@ export function EditorWorkspace({ documentId }: EditorWorkspaceProps) {
                   variant={isActive ? "secondary" : "ghost"}
                   size="sm"
                   className={cn(
-                    "text-xs h-7.5 rounded-full px-3 gap-1.5 transition-all font-medium",
+                    "text-xs h-7 sm:h-7.5 shrink-0 rounded-full px-2 sm:px-3 gap-1 sm:gap-1.5 transition-all font-medium",
                     isActive
                       ? "bg-primary text-primary-foreground font-bold shadow-sm border border-primary/10 hover:bg-primary hover:text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -246,14 +246,14 @@ export function EditorWorkspace({ documentId }: EditorWorkspaceProps) {
                   onClick={() => setActiveTool(tool.id)}
                 >
                   <tool.icon className={cn("size-3.5", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
-                  <span>{tool.label}</span>
+                  <span className="hidden sm:inline">{tool.label}</span>
                 </Button>
               );
             })}
           </div>
 
           {/* PDF Page View */}
-          <div className="w-full flex justify-center py-4">
+          <div className="w-full max-w-full flex justify-center py-2 sm:py-4">
             <PdfDocumentView
               data={currentDocument.data}
               scale={scale}
