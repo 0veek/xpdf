@@ -14,6 +14,22 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
+function UnderlineOverlay({ rect, color }: { rect: NormalizedRect; color: string }) {
+  return (
+    <div
+      className="absolute pointer-events-none"
+      style={{
+        left: `${rect.x * 100}%`,
+        top: `calc(${(rect.y + rect.height) * 100}% - 2px)`,
+        width: `${rect.width * 100}%`,
+        height: "3px",
+        backgroundColor: color,
+        borderRadius: "1px",
+      }}
+    />
+  );
+}
+
 type PdfDocumentViewProps = {
   data: ArrayBuffer;
   scale?: number;
@@ -170,14 +186,18 @@ function PageAnnotations({
       return;
     }
 
-    const minW = activeTool === "underline" ? 0.01 : 0.01;
-    const minH = activeTool === "underline" ? 0.005 : 0.005;
+    const minW = 0.01;
+    const minH = 0.005;
+    const isUnderline = activeTool === "underline";
+    const isValid = isUnderline
+      ? preview.width > minW
+      : preview.width > minW && preview.height > minH;
 
-    if (preview.width > minW && preview.height > minH) {
+    if (isValid) {
       const type =
         activeTool === "redaction"
           ? "redaction"
-          : activeTool === "underline"
+          : isUnderline
             ? "underline"
             : "highlight";
 
@@ -185,10 +205,9 @@ function PageAnnotations({
         documentId: "",
         pageNumber,
         type,
-        rect:
-          type === "underline"
-            ? { ...preview, height: Math.max(preview.height, 0.012) }
-            : preview,
+        rect: isUnderline
+          ? { ...preview, height: Math.max(preview.height, 0.008) }
+          : preview,
         color: ANNOTATION_COLORS[type],
       });
     }
@@ -231,25 +250,25 @@ function PageAnnotations({
         </svg>
       )}
 
-      {preview && (
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: `${preview.x * 100}%`,
-            top: `${preview.y * 100}%`,
-            width: `${preview.width * 100}%`,
-            height: `${preview.height * 100}%`,
-            backgroundColor:
-              activeTool === "redaction"
-                ? "rgba(0,0,0,0.7)"
-                : activeTool === "underline"
-                  ? undefined
-                  : "rgba(255, 213, 0, 0.3)",
-            borderBottom:
-              activeTool === "underline" ? "3px solid rgba(255, 59, 48, 0.6)" : undefined,
-          }}
-        />
-      )}
+      {preview &&
+        (activeTool === "underline" ? (
+          <UnderlineOverlay
+            rect={{ ...preview, height: Math.max(preview.height, 0.008) }}
+            color="rgba(255, 59, 48, 0.85)"
+          />
+        ) : (
+          <div
+            className="absolute pointer-events-none"
+            style={{
+              left: `${preview.x * 100}%`,
+              top: `${preview.y * 100}%`,
+              width: `${preview.width * 100}%`,
+              height: `${preview.height * 100}%`,
+              backgroundColor:
+                activeTool === "redaction" ? "rgba(0,0,0,0.7)" : "rgba(255, 213, 0, 0.3)",
+            }}
+          />
+        ))}
     </div>
   );
 }
@@ -267,6 +286,10 @@ function AnnotationRender({ ann, onClick }: { ann: Annotation; onClick: () => vo
         />
       </svg>
     );
+  }
+
+  if (ann.type === "underline") {
+    return <UnderlineOverlay rect={ann.rect} color={ann.color} />;
   }
 
   if (ann.type === "signature" && ann.signatureDataUrl) {
@@ -298,12 +321,11 @@ function AnnotationRender({ ann, onClick }: { ann: Annotation; onClick: () => vo
         width: `${ann.rect.width * 100}%`,
         height: `${ann.rect.height * 100}%`,
         backgroundColor:
-          ann.type === "underline" || ann.type === "stamp"
+          ann.type === "stamp"
             ? undefined
             : ann.type === "redaction"
               ? "#000"
               : ann.color,
-        borderBottom: ann.type === "underline" ? `3px solid ${ann.color}` : undefined,
         border: ann.type === "stamp" ? `2px solid ${ann.color}` : undefined,
       }}
       onClick={(e) => {
