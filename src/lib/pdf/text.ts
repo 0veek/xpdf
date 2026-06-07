@@ -30,9 +30,11 @@ export async function extractFullText(data: ArrayBuffer): Promise<string> {
 export async function renderPageToCanvas(
   data: ArrayBuffer,
   pageIndex: number,
-  scale = 2
+  scale = 2,
+  options?: { pixelRatio?: number }
 ): Promise<HTMLCanvasElement> {
   const pdfjsLib = await import("pdfjs-dist");
+  const { renderPdfPageToCanvas } = await import("./render");
   pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
     "pdfjs-dist/build/pdf.worker.min.mjs",
     import.meta.url
@@ -40,13 +42,8 @@ export async function renderPageToCanvas(
 
   const pdf = await pdfjsLib.getDocument({ data: data.slice(0) }).promise;
   const page = await pdf.getPage(pageIndex + 1);
-  const viewport = page.getViewport({ scale });
   const canvas = document.createElement("canvas");
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas unavailable");
-  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+  await renderPdfPageToCanvas(page, canvas, scale, options);
   return canvas;
 }
 

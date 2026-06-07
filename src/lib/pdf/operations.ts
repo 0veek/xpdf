@@ -191,18 +191,14 @@ export async function renderPageThumbnail(
     import.meta.url
   ).toString();
 
+  const { renderPdfPageToCanvas } = await import("./render");
+
   const pdf = await pdfjsLib.getDocument({ data: data.slice(0) }).promise;
   const page = await pdf.getPage(pageIndex + 1);
-  const viewport = page.getViewport({ scale: 1 });
-  const scale = maxWidth / viewport.width;
-  const scaled = page.getViewport({ scale });
+  const baseViewport = page.getViewport({ scale: 1 });
+  const scale = maxWidth / baseViewport.width;
 
   const canvas = document.createElement("canvas");
-  canvas.width = scaled.width;
-  canvas.height = scaled.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas unavailable");
-
-  await page.render({ canvasContext: ctx, viewport: scaled, canvas }).promise;
+  await renderPdfPageToCanvas(page, canvas, scale);
   return canvas.toDataURL("image/jpeg", 0.7);
 }

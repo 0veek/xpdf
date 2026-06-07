@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import type { Annotation, AnnotateTool, NormalizedPoint, NormalizedRect } from "@/lib/pdf/types";
 import { ANNOTATION_COLORS } from "@/lib/pdf/types";
+import { renderPdfPageToCanvas, type PageDimensions } from "@/lib/pdf/render";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -11,8 +12,6 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
   import.meta.url
 ).toString();
-
-type PageDimensions = { width: number; height: number };
 
 type PdfDocumentViewProps = {
   data: ArrayBuffer;
@@ -328,6 +327,78 @@ function AnnotationRender({ ann, onClick }: { ann: Annotation; onClick: () => vo
   );
 }
 
+function PdfPage({
+  pdf,
+  pageNumber,
+  scale,
+  annotations,
+  activeTool,
+  stampLabel,
+  signatureDataUrl,
+  ocrText,
+  showOcrOverlay,
+  onAddAnnotation,
+  onAnnotationClick,
+}: {
+  pdf: pdfjsLib.PDFDocumentProxy;
+  pageNumber: number;
+  scale: number;
+  annotations: Annotation[];
+  activeTool: AnnotateTool;
+  stampLabel?: string;
+  signatureDataUrl?: string | null;
+  ocrText?: string;
+  showOcrOverlay?: boolean;
+  onAddAnnotation: (partial: Omit<Annotation, "id" | "createdAt">) => void;
+  onAnnotationClick?: (id: string) => void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [dims, setDims] = useState<PageDimensions | null>(null);
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    void (async () => {
+      try {
+        const page = await pdf.getPage(pageNumber);
+        if (cancelled || !canvasRef.current) return;
+        const dimensions = await renderPdfPageToCanvas(page, canvasRef.current, scale);
+        if (!cancelled) setDims(dimensions);
+      } catch {
+        if (!cancelled) setDims(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pdf, pageNumber, scale]);
+
+  return (
+    <div
+      className="relative shadow-elevated rounded-sm bg-white"
+      style={dims ? { width: dims.width, height: dims.height } : { width: 612 * scale, height: 792 * scale }}
+    >
+      <canvas ref={canvasRef} className="block" />
+      {dims && (
+        <PageAnnotations
+          pageNumber={pageNumber}
+          annotations={annotations}
+          activeTool={activeTool}
+          stampLabel={stampLabel}
+          signatureDataUrl={signatureDataUrl}
+          ocrText={ocrText}
+          showOcrOverlay={showOcrOverlay}
+          onAddAnnotation={onAddAnnotation}
+          onAnnotationClick={onAnnotationClick}
+        />
+      )}
+    </div>
+  );
+}
+
 export function PdfDocumentView({
   data,
   scale = 1.25,
@@ -341,45 +412,36 @@ export function PdfDocumentView({
   onAnnotationClick,
   className,
 }: PdfDocumentViewProps) {
+  const [pdf, setPdf] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
   const [pageCount, setPageCount] = useState(0);
-  const [pages, setPages] = useState<{ canvas: HTMLCanvasElement; dims: PageDimensions }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setPdf(null);
+    setPageCount(0);
 
-    async function render() {
-      setLoading(true);
-      setError(null);
-      try {
-        const pdf = await pdfjsLib.getDocument({ data: data.slice(0) }).promise;
+    pdfjsLib
+      .getDocument({ data: data.slice(0) })
+      .promise.then((doc) => {
         if (cancelled) return;
-        setPageCount(pdf.numPages);
-
-        const rendered: { canvas: HTMLCanvasElement; dims: PageDimensions }[] = [];
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale });
-          const canvas = document.createElement("canvas");
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          const ctx = canvas.getContext("2d");
-          if (!ctx) continue;
-          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
-          rendered.push({ canvas, dims: { width: viewport.width, height: viewport.height } });
-        }
-        if (!cancelled) setPages(rendered);
-      } catch (err) {
+        setPdf(doc);
+        setPageCount(doc.numPages);
+      })
+      .catch((err) => {
         if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load PDF");
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false);
-      }
-    }
+      });
 
-    render();
-    return () => { cancelled = true; };
-  }, [data, scale]);
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
 
   if (loading) {
     return (
@@ -397,41 +459,25 @@ export function PdfDocumentView({
     );
   }
 
+  if (!pdf) return null;
+
   return (
     <div className={cn("flex flex-col gap-6 items-center", className)}>
-      {pages.map((page, index) => (
-        <div
+      {Array.from({ length: pageCount }, (_, index) => (
+        <PdfPage
           key={index}
-          className="relative shadow-elevated rounded-sm bg-white"
-          style={{ width: page.dims.width, height: page.dims.height }}
-        >
-          <canvas
-            ref={(el) => {
-              if (el && page.canvas) {
-                const ctx = el.getContext("2d");
-                if (ctx) {
-                  el.width = page.canvas.width;
-                  el.height = page.canvas.height;
-                  ctx.drawImage(page.canvas, 0, 0);
-                }
-              }
-            }}
-            className="block"
-            width={page.dims.width}
-            height={page.dims.height}
-          />
-          <PageAnnotations
-            pageNumber={index + 1}
-            annotations={annotations}
-            activeTool={activeTool}
-            stampLabel={stampLabel}
-            signatureDataUrl={signatureDataUrl}
-            ocrText={ocrPages?.[index + 1]?.text}
-            showOcrOverlay={showOcrOverlay}
-            onAddAnnotation={(partial) => onAddAnnotation({ ...partial, documentId: "" })}
-            onAnnotationClick={onAnnotationClick}
-          />
-        </div>
+          pdf={pdf}
+          pageNumber={index + 1}
+          scale={scale}
+          annotations={annotations}
+          activeTool={activeTool}
+          stampLabel={stampLabel}
+          signatureDataUrl={signatureDataUrl}
+          ocrText={ocrPages?.[index + 1]?.text}
+          showOcrOverlay={showOcrOverlay}
+          onAddAnnotation={(partial) => onAddAnnotation({ ...partial, documentId: "" })}
+          onAnnotationClick={onAnnotationClick}
+        />
       ))}
       <p className="text-xs text-muted-foreground tabular-nums pb-4">
         {pageCount} {pageCount === 1 ? "page" : "pages"}
