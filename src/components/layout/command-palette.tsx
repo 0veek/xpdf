@@ -48,8 +48,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
         <CommandGroup heading="Actions">
           <CommandItem onSelect={() => navigate("/files")}>
-            <span>Import PDF</span>
+            <span>Import document</span>
             <CommandShortcut>⌘O</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={() => navigate("/xhtml")}>
+            <span>XHTML editor</span>
           </CommandItem>
           <CommandItem onSelect={() => navigate("/organize")}>
             <span>Organize pages</span>

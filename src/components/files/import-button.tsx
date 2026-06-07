@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useDocumentStore } from "@/stores/document-store";
-import { imagesToPdf } from "@/lib/pdf/operations";
+import { ALL_DOCUMENT_ACCEPT } from "@/lib/documents/kind";
+import { importDocumentsFromFiles } from "@/lib/documents/import";
 import { Upload } from "lucide-react";
 
 export function ImportButton() {
@@ -16,27 +17,16 @@ export function ImportButton() {
   const handleFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     try {
-      const list = Array.from(files);
-      const pdfs = list.filter((f) => f.type === "application/pdf");
-      const images = list.filter((f) => f.type.startsWith("image/"));
-
-      if (pdfs.length > 0) {
-        const id = await importFile(pdfs[0]);
-        toast.success(`Imported ${pdfs[0].name}`);
-        router.push(`/editor/${id}`);
+      const result = await importDocumentsFromFiles(Array.from(files), {
+        importFile,
+        importBuffer,
+      });
+      if (!result) {
+        toast.error("Unsupported file type");
         return;
       }
-
-      if (images.length > 0) {
-        const data = await imagesToPdf(images);
-        const name =
-          images.length === 1
-            ? `${images[0].name.replace(/\.\w+$/, "")}.pdf`
-            : "Images.pdf";
-        const id = await importBuffer(name, data);
-        toast.success(`Created PDF from ${images.length} image(s)`);
-        router.push(`/editor/${id}`);
-      }
+      toast.success(result.message);
+      router.push(result.href);
     } catch {
       toast.error("Import failed");
     }
@@ -65,7 +55,7 @@ export function ImportButton() {
       <input
         ref={inputRef}
         type="file"
-        accept="application/pdf,image/png,image/jpeg"
+        accept={ALL_DOCUMENT_ACCEPT}
         multiple
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}

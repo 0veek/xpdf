@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDocumentStore } from "@/stores/document-store";
+import { getDocumentKind } from "@/lib/documents/kind";
 import { exportWithAnnotations } from "@/lib/pdf/operations";
 import { downloadBlob, type AnnotateTool } from "@/lib/pdf/types";
 import { cn } from "@/lib/utils";
@@ -74,10 +75,17 @@ export function EditorWorkspace({ documentId }: EditorWorkspaceProps) {
   } = useDocumentStore();
 
   useEffect(() => {
-    openDocument(documentId).catch(() => {
-      toast.error("Document not found");
-      router.push("/files");
-    });
+    openDocument(documentId)
+      .then(() => {
+        const doc = useDocumentStore.getState().currentDocument;
+        if (doc && getDocumentKind(doc) === "xhtml") {
+          router.replace(`/xhtml/${documentId}`);
+        }
+      })
+      .catch(() => {
+        toast.error("Document not found");
+        router.push("/files");
+      });
   }, [documentId, openDocument, router]);
 
   const handleExport = async () => {

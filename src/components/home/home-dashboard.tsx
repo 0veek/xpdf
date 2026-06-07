@@ -9,7 +9,9 @@ import { useDocumentStore } from "@/stores/document-store";
 import { formatFileSize, formatRelativeTime } from "@/lib/pdf/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { imagesToPdf } from "@/lib/pdf/operations";
+import { editorHref, getDocumentKind } from "@/lib/documents/kind";
+import { importDocumentsFromFiles } from "@/lib/documents/import";
+import { BLANK_XHTML, textToArrayBuffer } from "@/lib/xhtml/utils";
 import {
   GitCompare,
   PenLine,
@@ -34,20 +36,24 @@ export function HomeDashboard() {
 
   const handleImport = async (files: File[]) => {
     try {
-      const pdfs = files.filter((f) => f.type === "application/pdf");
-      if (pdfs.length > 0) {
-        const id = await importFile(pdfs[0]);
-        router.push(`/editor/${id}`);
+      const result = await importDocumentsFromFiles(files, { importFile, importBuffer });
+      if (!result) {
+        toast.error("Unsupported file type");
         return;
       }
-      const images = files.filter((f) => f.type.startsWith("image/"));
-      if (images.length > 0) {
-        const data = await imagesToPdf(images);
-        const id = await importBuffer("Images.pdf", data);
-        router.push(`/editor/${id}`);
-      }
+      router.push(result.href);
     } catch {
       toast.error("Import failed");
+    }
+  };
+
+  const handleCreateBlankXhtml = async () => {
+    try {
+      const id = await importBuffer("Untitled.xhtml", textToArrayBuffer(BLANK_XHTML), "xhtml");
+      router.push(`/xhtml/${id}`);
+      toast.success("Created blank XHTML document");
+    } catch {
+      toast.error("Failed to create XHTML document");
     }
   };
 
@@ -116,7 +122,7 @@ export function HomeDashboard() {
             <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Quick Start Templates
             </h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 onClick={handleCreateBlankA4}
                 className="flex items-center gap-3 rounded-xl p-3 bg-muted/20 border border-border/20 hover:bg-muted/40 hover:border-border/30 transition-all text-left group cursor-pointer shadow-sm active:scale-[0.98]"
@@ -140,6 +146,19 @@ export function HomeDashboard() {
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">US Letter</p>
                   <p className="text-[9px] text-muted-foreground/80 truncate">Start US Letter page</p>
+                </div>
+              </button>
+
+              <button
+                onClick={handleCreateBlankXhtml}
+                className="flex items-center gap-3 rounded-xl p-3 bg-muted/20 border border-border/20 hover:bg-muted/40 hover:border-border/30 transition-all text-left group cursor-pointer shadow-sm active:scale-[0.98]"
+              >
+                <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:scale-105 transition-transform shrink-0">
+                  <Plus className="size-4 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground/90 group-hover:text-primary transition-colors">Blank XHTML</p>
+                  <p className="text-[9px] text-muted-foreground/80 truncate">Edit structured markup</p>
                 </div>
               </button>
             </div>
@@ -167,13 +186,16 @@ export function HomeDashboard() {
                 {recent.map((doc) => (
                   <Link
                     key={doc.id}
-                    href={`/editor/${doc.id}`}
+                    href={editorHref(doc.id, doc)}
                     className="flex flex-col items-center gap-3 rounded-2xl p-3 bg-muted/15 border border-border/10 hover:bg-muted/30 hover:border-border/30 transition-all duration-300 group text-center cursor-pointer shadow-sm"
                   >
                     {/* macOS-style PDF Preview Icon */}
                     <div className="relative w-12 h-16 bg-background dark:bg-card rounded-md border border-border/50 shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300 overflow-hidden flex flex-col items-center justify-between py-1 shrink-0">
-                      <div className="absolute top-1 left-0 right-0 bg-red-600 text-[6px] font-black text-white text-center py-0.5 tracking-wider uppercase select-none">
-                        PDF
+                      <div className={cn(
+                        "absolute top-1 left-0 right-0 text-[6px] font-black text-white text-center py-0.5 tracking-wider uppercase select-none",
+                        getDocumentKind(doc) === "xhtml" ? "bg-blue-600" : "bg-red-600"
+                      )}>
+                        {getDocumentKind(doc) === "xhtml" ? "XHTML" : "PDF"}
                       </div>
                       <div className="w-6 h-[1.5px] bg-muted-foreground/15 rounded-full mt-4"></div>
                       <div className="w-8 h-[1.5px] bg-muted-foreground/15 rounded-full"></div>

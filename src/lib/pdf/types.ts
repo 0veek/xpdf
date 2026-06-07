@@ -38,12 +38,15 @@ export type Annotation = {
   createdAt: number;
 };
 
+export type DocumentKind = "pdf" | "xhtml";
+
 export type StoredDocument = {
   id: string;
   name: string;
   data: ArrayBuffer;
   pageCount: number;
   fileSize: number;
+  kind?: DocumentKind;
   createdAt: number;
   updatedAt: number;
   ocrPages?: Record<number, { text: string; confidence: number }>;

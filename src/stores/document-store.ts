@@ -9,8 +9,15 @@ import {
   replaceAnnotations,
   deleteAnnotation as dbDeleteAnnotation,
 } from "@/lib/db/indexed-db";
+import { isXhtmlFilename } from "@/lib/documents/kind";
 import { getPageCount } from "@/lib/pdf/operations";
-import type { Annotation, AnnotationComment, DocumentMeta, StoredDocument } from "@/lib/pdf/types";
+import type {
+  Annotation,
+  AnnotationComment,
+  DocumentKind,
+  DocumentMeta,
+  StoredDocument,
+} from "@/lib/pdf/types";
 
 type HistoryEntry = {
   annotations: Annotation[];
@@ -26,7 +33,7 @@ type DocumentState = {
 
   loadDocuments: () => Promise<void>;
   importFile: (file: File) => Promise<string>;
-  importBuffer: (name: string, data: ArrayBuffer) => Promise<string>;
+  importBuffer: (name: string, data: ArrayBuffer, kind?: DocumentKind) => Promise<string>;
   openDocument: (id: string) => Promise<void>;
   updateDocumentData: (data: ArrayBuffer, pageCount?: number) => Promise<void>;
   deleteDocumentById: (id: string) => Promise<void>;
@@ -74,8 +81,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     return get().importBuffer(file.name, data);
   },
 
-  importBuffer: async (name: string, data: ArrayBuffer) => {
-    const pageCount = await getPageCount(data);
+  importBuffer: async (name: string, data: ArrayBuffer, kind?: DocumentKind) => {
+    const resolvedKind = kind ?? (isXhtmlFilename(name) ? "xhtml" : "pdf");
+    const pageCount = resolvedKind === "xhtml" ? 1 : await getPageCount(data);
     const id = crypto.randomUUID();
     const now = Date.now();
     const doc: StoredDocument = {
@@ -84,6 +92,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       data,
       pageCount,
       fileSize: data.byteLength,
+      kind: resolvedKind,
       createdAt: now,
       updatedAt: now,
     };
@@ -113,7 +122,11 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const { currentDocument } = get();
     if (!currentDocument) return;
 
-    const count = pageCount ?? (await getPageCount(data));
+    const count =
+      pageCount ??
+      (currentDocument.kind === "xhtml" || isXhtmlFilename(currentDocument.name)
+        ? 1
+        : await getPageCount(data));
     const updated: StoredDocument = {
       ...currentDocument,
       data,

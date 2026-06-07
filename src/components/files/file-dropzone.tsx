@@ -14,7 +14,7 @@ type FileDropzoneProps = {
 
 export function FileDropzone({
   onFiles,
-  accept = "application/pdf,image/png,image/jpeg",
+  accept = "application/pdf,image/png,image/jpeg,application/xhtml+xml,text/html,.xhtml,.html,.htm",
   multiple = true,
   className,
   label = "Drop PDF files here, or click to browse",
@@ -60,7 +60,7 @@ export function FileDropzone({
       <div className="text-center flex flex-col gap-1">
         <p className="text-sm font-semibold tracking-tight text-foreground/90 group-hover/dropzone:text-primary transition-colors">{label}</p>
         <p className="text-xs text-muted-foreground/85 font-medium">
-          PDF, PNG, JPEG · Local in-browser privacy
+          PDF, XHTML, PNG, JPEG · Local in-browser privacy
         </p>
       </div>
       <input

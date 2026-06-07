@@ -8,9 +8,11 @@ import { FileDropzone } from "@/components/files/file-dropzone";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDocumentStore } from "@/stores/document-store";
+import { editorHref, getDocumentKind, ALL_DOCUMENT_ACCEPT } from "@/lib/documents/kind";
+import { importDocumentsFromFiles } from "@/lib/documents/import";
+import { BLANK_XHTML, textToArrayBuffer } from "@/lib/xhtml/utils";
 import { formatFileSize, formatRelativeTime } from "@/lib/pdf/types";
-import { FileText, Trash2 } from "lucide-react";
-import { imagesToPdf } from "@/lib/pdf/operations";
+import { Code2, FileText, Plus, Trash2 } from "lucide-react";
 
 export function FilesWorkspace() {
   const router = useRouter();
@@ -23,25 +25,25 @@ export function FilesWorkspace() {
 
   const handleImport = async (files: File[]) => {
     try {
-      const pdfs = files.filter((f) => f.type === "application/pdf");
-      const images = files.filter((f) => f.type.startsWith("image/"));
-
-      for (const file of pdfs) {
-        const id = await importFile(file);
-        toast.success(`Imported ${file.name}`);
-        router.push(`/editor/${id}`);
+      const result = await importDocumentsFromFiles(files, { importFile, importBuffer });
+      if (!result) {
+        toast.error("Unsupported file type");
         return;
       }
-
-      if (images.length > 0) {
-        const data = await imagesToPdf(images);
-        const name = images.length === 1 ? `${images[0].name.replace(/\.\w+$/, "")}.pdf` : "Images.pdf";
-        const id = await importBuffer(name, data);
-        toast.success(`Created PDF from ${images.length} image(s)`);
-        router.push(`/editor/${id}`);
-      }
+      toast.success(result.message);
+      router.push(result.href);
     } catch {
       toast.error("Failed to import file");
+    }
+  };
+
+  const handleCreateBlankXhtml = async () => {
+    try {
+      const id = await importBuffer("Untitled.xhtml", textToArrayBuffer(BLANK_XHTML), "xhtml");
+      toast.success("Created blank XHTML document");
+      router.push(`/xhtml/${id}`);
+    } catch {
+      toast.error("Failed to create document");
     }
   };
 
@@ -50,11 +52,20 @@ export function FilesWorkspace() {
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Files</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Documents are saved locally in your browser. No account required.
+          PDF and XHTML documents are saved locally in your browser. No account required.
         </p>
       </div>
 
-      <FileDropzone onFiles={handleImport} />
+      <FileDropzone
+        onFiles={handleImport}
+        accept={ALL_DOCUMENT_ACCEPT}
+        label="Drop PDF or XHTML files here, or click to browse"
+      />
+
+      <Button variant="outline" size="sm" className="w-fit gap-1.5 text-xs" onClick={handleCreateBlankXhtml}>
+        <Plus className="size-3.5" />
+        New blank XHTML
+      </Button>
 
       <section>
         <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
@@ -62,7 +73,7 @@ export function FilesWorkspace() {
         </h2>
         {documents.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center border rounded-lg">
-            No documents yet. Import a PDF to get started.
+            No documents yet. Import a PDF or XHTML file to get started.
           </p>
         ) : (
           <div className="flex flex-col gap-1">
@@ -72,16 +83,23 @@ export function FilesWorkspace() {
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-muted/60 transition-colors group"
               >
                 <Link
-                  href={`/editor/${doc.id}`}
+                  href={editorHref(doc.id, doc)}
                   className="flex items-center gap-3 flex-1 min-w-0"
                 >
                   <div className="flex size-9 items-center justify-center rounded-md bg-muted shrink-0">
-                    <FileText className="size-4 text-muted-foreground" />
+                    {getDocumentKind(doc) === "xhtml" ? (
+                      <Code2 className="size-4 text-muted-foreground" />
+                    ) : (
+                      <FileText className="size-4 text-muted-foreground" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{doc.name}</p>
                     <p className="text-xs text-muted-foreground tabular-nums">
-                      {formatRelativeTime(doc.updatedAt)} · {doc.pageCount} pages · {formatFileSize(doc.fileSize)}
+                      {formatRelativeTime(doc.updatedAt)}
+                      {getDocumentKind(doc) === "pdf" ? ` · ${doc.pageCount} pages` : " · XHTML"}
+                      {" · "}
+                      {formatFileSize(doc.fileSize)}
                     </p>
                   </div>
                 </Link>

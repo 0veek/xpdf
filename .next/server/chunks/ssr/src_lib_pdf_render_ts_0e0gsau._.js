@@ -1,0 +1,3 @@
+module.exports=[75667,a=>{"use strict";function b(){return 1}async function c(a,c,d,e){let f=e?.pixelRatio??b(),g=a.getViewport({scale:d}),h=a.getViewport({scale:d*f});c.width=h.width,c.height=h.height,c.style.width=`${g.width}px`,c.style.height=`${g.height}px`;let i=c.getContext("2d");if(!i)throw Error("Canvas unavailable");return await a.render({canvasContext:i,viewport:h,canvas:c}).promise,{width:g.width,height:g.height}}a.s(["getDevicePixelRatio",0,b,"renderPdfPageToCanvas",0,c])}];
+
+//# sourceMappingURL=src_lib_pdf_render_ts_0e0gsau._.js.map

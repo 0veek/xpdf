@@ -1,0 +1,17 @@
+{
+  "status": 307,
+  "headers": {
+    "location": "/files",
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/xhtml/layout,_N_T_/xhtml/page,_N_T_/xhtml"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/xhtml/__PAGE__",
+    "/xhtml",
+    "/_index",
+    "/_head"
+  ]
+}

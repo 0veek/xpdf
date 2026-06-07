@@ -12,6 +12,7 @@ import {
   Signature,
   Sparkles,
   Workflow,
+  Code2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ export const primaryNav: NavItem[] = [
   { title: "Home", href: "/", icon: Home, description: "Recent files and quick actions" },
   { title: "Files", href: "/files", icon: FolderOpen, description: "Import and manage documents" },
   { title: "Editor", href: "/files", icon: PenLine, description: "View, annotate, export PDFs" },
+  { title: "XHTML", href: "/xhtml", icon: Code2, description: "Edit XHTML and XML documents" },
   { title: "Organize", href: "/organize", icon: LayoutGrid, description: "Reorder, rotate, merge pages" },
   { title: "Convert", href: "/convert", icon: RefreshCw, description: "Export images and text" },
   { title: "OCR", href: "/ocr", icon: ScanText, description: "Recognize scanned text" },
